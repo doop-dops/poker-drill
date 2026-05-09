@@ -246,6 +246,17 @@
   <div class="settings-panel">
 
     <div>
+      <div class="section-label">Starting Street</div>
+      <div class="pill-group" id="street-select">
+        <div class="pill active" data-val="turn">Turn</div>
+        <div class="pill" data-val="river">River</div>
+        <div class="pill" data-val="random">Random</div>
+      </div>
+    </div>
+
+    <div class="settings-divider"></div>
+
+    <div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
         <span class="section-label" style="margin-bottom:0;">High Card</span>
         <div style="display:flex;gap:6px;">
@@ -458,12 +469,13 @@ const ranges = {
 };
 
 // ── Bet cap state ─────────────────────────────────────────────────────────────
-let betCapEnabled   = false;
+let betCapEnabled   = true;
 let betCapPct       = 30; // percent of stack
-let betFloorEnabled = false;
+let betFloorEnabled = true;
 let betFloorPct     = 20; // percent of pot
 
 // ── Drill state ───────────────────────────────────────────────────────────────
+let startingStreet = "turn"; // "turn" | "river" | "random"
 let mode="turn", scenario=null, revealed=false;
 let timerLen=30, seconds=30, running=false, expired=false, intervalId=null;
 
@@ -952,6 +964,9 @@ function nextScenario() {
 }
 
 function showDrill() {
+  // Apply starting street choice
+  if (startingStreet === "random") mode = Math.random() < 0.5 ? "turn" : "river";
+  else mode = startingStreet;
   document.getElementById("screen-settings").classList.add("hidden");
   document.getElementById("screen-drill").classList.remove("hidden");
   nextScenario();
@@ -961,6 +976,15 @@ function showDrill() {
 setupPillGroup("filter-highcard","highcard");
 setupPillGroup("filter-connect", "connect");
 setupPillGroup("filter-tone",    "tone");
+
+// Starting street — single select
+document.getElementById("street-select").querySelectorAll(".pill").forEach(pill => {
+  pill.addEventListener("click", () => {
+    document.getElementById("street-select").querySelectorAll(".pill").forEach(p => p.classList.remove("active"));
+    pill.classList.add("active");
+    startingStreet = pill.dataset.val;
+  });
+});
 
 // All / None for high card
 const HC_VALS = ["A","K","Q","J","T","9","8","7","6","5","4","3"];
