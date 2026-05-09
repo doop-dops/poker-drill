@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Poker Drill</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0a0a1a;
+    font-family: system-ui, sans-serif;
+    color: #e2e8f0;
+    min-height: 100vh;
+  }
+
+  .screen {
+    min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; padding: 32px 24px; gap: 24px;
+  }
+  .screen.hidden { display: none; }
+
+  .settings-title { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; text-align: center; }
+  .settings-sub   { font-size: 12px; color: #64748b; margin-top: 4px; letter-spacing: 1px; text-align: center; }
+
+  .settings-panel {
+    width: 100%; max-width: 440px;
+    display: flex; flex-direction: column; gap: 24px;
+    padding: 28px 32px;
+    background: #0f0f20; border-radius: 16px; border: 1px solid #ffffff0f;
+  }
+
+  .section-label {
+    font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: #64748b; margin-bottom: 10px;
+  }
+
+  .pill-group { display: flex; flex-wrap: wrap; gap: 8px; }
+  .pill {
+    padding: 6px 14px; border-radius: 20px; border: 1px solid #ffffff20;
+    background: transparent; color: #64748b;
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    transition: all 0.15s; user-select: none;
+  }
+  .pill.active { border-color: #6366f1; background: #6366f120; color: #a5b4fc; }
+  .pill:hover:not(.active) { border-color: #ffffff40; color: #94a3b8; }
+
+  .filter-warn {
+    font-size: 11px; color: #f59e0b; letter-spacing: 0.5px;
+    padding: 6px 10px; background: #f59e0b10; border-radius: 6px;
+    border: 1px solid #f59e0b30; display: none;
+  }
+  .filter-warn.visible { display: block; }
+
+  .match-count { font-size: 11px; color: #64748b; letter-spacing: 0.5px; text-align: right; margin-top: -8px; }
+  .match-count span { color: #818cf8; font-weight: 700; }
+
+  .settings-divider { width: 100%; height: 1px; background: #ffffff0f; }
+
+  /* Sliders */
+  .slider-wrap { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+  .slider-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .slider-label { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: #64748b; }
+  .slider-inputs { display: flex; align-items: center; gap: 6px; }
+  .slider-inputs input {
+    width: 72px; padding: 3px 7px; border-radius: 6px;
+    border: 1px solid #6366f140; background: #0a0a1a;
+    color: #e2e8f0; font-size: 13px; font-weight: 700;
+    text-align: center; outline: none; font-family: system-ui, sans-serif;
+  }
+  .slider-dash { color: #64748b; font-size: 12px; }
+  .slider-track-wrap {
+    position: relative; height: 6px;
+    background: #ffffff12; border-radius: 3px; cursor: pointer;
+  }
+  .slider-fill { position: absolute; top: 0; height: 100%; border-radius: 3px; background: #6366f1; }
+  .slider-handle {
+    position: absolute; top: 50%; transform: translate(-50%, -50%);
+    width: 18px; height: 18px; border-radius: 50%;
+    background: #6366f1; border: 2px solid #818cf8;
+    cursor: grab; box-shadow: 0 0 8px #6366f180; z-index: 2; touch-action: none;
+  }
+  .slider-handle:active { cursor: grabbing; }
+  .slider-bounds { display: flex; justify-content: space-between; margin-top: 2px; }
+  .slider-bounds span { font-size: 10px; color: #ffffff25; }
+  .select-btn {
+    padding: 3px 10px; border-radius: 6px; border: 1px solid #ffffff20;
+    background: transparent; color: #64748b; font-size: 11px; font-weight: 600;
+    cursor: pointer; letter-spacing: 0.5px; transition: all 0.15s;
+  }
+  .select-btn:hover { border-color: #6366f1; color: #a5b4fc; background: #6366f115; }
+
+  .sliders-inner { display: flex; flex-direction: column; gap: 24px; }
+
+  /* Bet cap toggle row */
+  .bet-cap-row {
+    display: flex; align-items: center; gap: 10px; cursor: pointer; user-select: none;
+  }
+  .toggle-box {
+    width: 38px; height: 22px; border-radius: 11px;
+    background: #ffffff18; border: 1px solid #ffffff20;
+    position: relative; flex-shrink: 0;
+    transition: background 0.2s, border-color 0.2s; cursor: pointer;
+  }
+  .toggle-box.on { background: #6366f1; border-color: #6366f1; }
+  .toggle-knob {
+    position: absolute; top: 2px; left: 2px;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: #fff; transition: transform 0.2s;
+    box-shadow: 0 1px 4px #00000060;
+  }
+  .toggle-box.on .toggle-knob { transform: translateX(16px); }
+  .bet-cap-label { font-size: 13px; font-weight: 600; color: #64748b; transition: color 0.2s; }
+  .bet-cap-label.on { color: #a5b4fc; }
+
+  /* Single-handle slider (for bet cap %) */
+  .single-slider-wrap {
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.3s ease, opacity 0.3s ease, margin-top 0.3s ease;
+    opacity: 0; margin-top: 0;
+  }
+  .single-slider-wrap.open {
+    max-height: 80px; opacity: 1; margin-top: 4px;
+  }
+  .single-slider-inner { display: flex; flex-direction: column; gap: 8px; padding-top: 6px; }
+  .single-slider-header { display: flex; justify-content: space-between; align-items: center; }
+  .single-slider-input {
+    width: 58px; padding: 2px 8px; border-radius: 6px;
+    border: 1px solid #6366f140; background: #0a0a1a;
+    color: #a5b4fc; font-size: 13px; font-weight: 700;
+    text-align: center; outline: none; font-family: system-ui, sans-serif;
+  }
+
+  /* Start button */
+  .btn-start {
+    padding: 14px 48px; border-radius: 12px; border: none;
+    background: #6366f1; color: #fff; font-size: 15px; font-weight: 800;
+    letter-spacing: 1px; cursor: pointer; text-transform: uppercase;
+    box-shadow: 0 0 24px #6366f140; transition: transform 0.1s, box-shadow 0.15s, opacity 0.15s;
+  }
+  .btn-start:hover:not(:disabled) { transform: scale(1.04); box-shadow: 0 0 32px #6366f160; }
+  .btn-start:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Drill screen */
+  .top-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center; }
+  .btn-settings {
+    padding: 6px 14px; border-radius: 8px; border: 1px solid #ffffff18;
+    background: transparent; color: #64748b; font-size: 12px;
+    font-weight: 600; cursor: pointer; letter-spacing: 1px;
+  }
+  .mode-toggle { display: flex; border-radius: 10px; overflow: hidden; border: 1px solid #ffffff15; }
+  .btn-mode {
+    padding: 8px 28px; border: none; cursor: pointer; font-size: 13px;
+    font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+    background: transparent; color: #64748b; transition: background 0.2s, color 0.2s;
+  }
+  .btn-mode.active { background: #6366f1; color: #fff; }
+
+  .chips { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+  .chip {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    cursor: pointer; padding: 6px 14px; border: 1px solid #6366f140;
+    border-radius: 8px; background: #6366f108;
+    transition: background 0.15s, transform 0.1s; user-select: none;
+  }
+  .chip:hover { background: #6366f122; transform: scale(1.05); }
+  .chip-label { font-size: 10px; color: #64748b; letter-spacing: 1px; text-transform: uppercase; }
+  .chip-value { font-size: 16px; font-weight: 700; color: #e2e8f0; }
+
+  .flop-tags { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+  .flop-tag {
+    font-size: 10px; letter-spacing: 0.5px; padding: 3px 9px;
+    border-radius: 10px; font-weight: 600; text-transform: uppercase;
+  }
+  .tag-monotone    { background:#7c3aed20; color:#a78bfa; border:1px solid #7c3aed40; }
+  .tag-twotone     { background:#0ea5e920; color:#38bdf8; border:1px solid #0ea5e940; }
+  .tag-rainbow     { background:#06b6d420; color:#67e8f9; border:1px solid #06b6d440; }
+  .tag-connected   { background:#ef444420; color:#f87171; border:1px solid #ef444440; }
+  .tag-oesd        { background:#f59e0b20; color:#fbbf24; border:1px solid #f59e0b40; }
+  .tag-disconnected{ background:#22c55e20; color:#86efac; border:1px solid #22c55e40; }
+
+  .cards-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: center; }
+  .card {
+    display: inline-flex; flex-direction: column; align-items: center;
+    justify-content: center; width: 54px; height: 76px;
+    background: #12122a; border-radius: 8px; font-size: 20px; font-weight: 700;
+    box-shadow: 0 0 8px #00000040; user-select: none; flex-shrink: 0;
+    position: relative; transition: transform 0.1s;
+  }
+  .card.rerollable { box-shadow: 0 0 14px #6366f140; cursor: pointer; }
+  .card.rerollable:hover { transform: scale(1.08); }
+  .card .reroll-icon { position: absolute; bottom: 2px; right: 3px; font-size: 9px; color: #ffffff40; }
+  .card .suit-sym { font-size: 14px; }
+  .card-hidden {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 54px; height: 76px;
+    background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+    border: 1.5px solid #6366f155; border-radius: 8px;
+    box-shadow: 0 0 16px #6366f130; cursor: pointer; user-select: none;
+    flex-shrink: 0; transition: transform 0.1s, box-shadow 0.15s;
+    font-size: 24px; color: #6366f1;
+  }
+  .card-hidden:hover { transform: scale(1.08); box-shadow: 0 0 22px #6366f155; }
+  .divider { width: 1px; height: 40px; background: #ffffff20; margin: 0 4px; flex-shrink: 0; }
+
+  .hint { font-size: 11px; color: #ffffff25; letter-spacing: 1px; }
+
+  .timer-wrap { width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+  .timer-bar { width: 100%; height: 8px; background: #ffffff15; border-radius: 4px; overflow: hidden; }
+  .timer-fill { height: 100%; border-radius: 4px; transition: width 1s linear, background 0.3s; }
+  .timer-display { font-size: 42px; font-weight: 700; font-variant-numeric: tabular-nums; color: #e2e8f0; letter-spacing: -1px; }
+  .timer-display.warn    { color: #f59e0b; }
+  .timer-display.expired { color: #ef4444; }
+
+  .timer-presets { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+  .btn-preset {
+    padding: 4px 12px; border-radius: 6px; border: 1px solid #ffffff20;
+    background: transparent; color: #64748b; cursor: pointer; font-size: 13px; font-weight: 600;
+  }
+  .btn-preset.active { border-color: #6366f1; background: #6366f120; color: #818cf8; }
+
+  .action-btns { display: flex; gap: 12px; }
+  .btn-primary {
+    padding: 12px 32px; border-radius: 10px; border: none;
+    background: #6366f1; color: #fff; font-size: 15px; font-weight: 700; cursor: pointer;
+    transition: background 0.2s;
+  }
+  .btn-primary.paused  { background: #374151; }
+  .btn-primary.expired { background: #ef4444; }
+  .btn-skip {
+    padding: 12px 20px; border-radius: 10px; border: 1px solid #ffffff20;
+    background: transparent; color: #94a3b8; font-size: 15px; font-weight: 600; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<!-- SETTINGS SCREEN -->
+<div id="screen-settings" class="screen">
+  <div>
+    <div class="settings-title">DRILL SETTINGS</div>
+    <div class="settings-sub">CONFIGURE RANGES &amp; FLOP FILTERS</div>
+  </div>
+
+  <div class="settings-panel">
+
+    <div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <span class="section-label" style="margin-bottom:0;">High Card</span>
+        <div style="display:flex;gap:6px;">
+          <button class="select-btn" id="hc-all">All</button>
+          <button class="select-btn" id="hc-none">None</button>
+        </div>
+      </div>
+      <div class="pill-group" id="filter-highcard">
+        <div class="pill active" data-val="A">Ace</div>
+        <div class="pill active" data-val="K">King</div>
+        <div class="pill active" data-val="Q">Queen</div>
+        <div class="pill active" data-val="J">Jack</div>
+        <div class="pill active" data-val="T">Ten</div>
+        <div class="pill active" data-val="9">Nine</div>
+        <div class="pill active" data-val="8">Eight</div>
+        <div class="pill active" data-val="7">Seven</div>
+        <div class="pill active" data-val="6">Six</div>
+        <div class="pill active" data-val="5">Five</div>
+        <div class="pill active" data-val="4">Four</div>
+        <div class="pill active" data-val="3">Three</div>
+      </div>
+    </div>
+
+    <div class="settings-divider"></div>
+
+    <div>
+      <div class="section-label">Connectedness</div>
+      <div class="pill-group" id="filter-connect">
+        <div class="pill active" data-val="connected">Connected <span style="font-size:10px;opacity:0.5">(straight possible)</span></div>
+        <div class="pill active" data-val="oesd">OESD possible</div>
+        <div class="pill active" data-val="disconnected">Disconnected</div>
+      </div>
+    </div>
+
+    <div class="settings-divider"></div>
+
+    <div>
+      <div class="section-label">Tone</div>
+      <div class="pill-group" id="filter-tone">
+        <div class="pill active" data-val="monotone">Monotone</div>
+        <div class="pill active" data-val="twotone">Two-tone</div>
+        <div class="pill active" data-val="rainbow">Rainbow</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="match-count"><span id="match-num">163</span> flops match your filters</div>
+      <div class="filter-warn" id="filter-warn">⚠ No flops match — select at least one option per category.</div>
+    </div>
+
+    <div class="settings-divider"></div>
+
+    <div>
+      <div class="section-label">Spot Ranges</div>
+      <div class="sliders-inner" id="sliders-container"></div>
+
+      <!-- Bet cap toggle -->
+      <div>
+        <div class="bet-cap-row" id="bet-cap-row">
+          <div class="toggle-box" id="bet-cap-toggle"><div class="toggle-knob"></div></div>
+          <span class="bet-cap-label" id="bet-cap-label">Bet cannot exceed % of stack</span>
+        </div>
+        <div class="single-slider-wrap" id="bet-cap-slider-wrap">
+          <div class="single-slider-inner">
+            <div class="single-slider-header">
+              <span class="slider-label">Max bet / stack</span>
+              <input type="text" id="bet-cap-display" class="single-slider-input" value="30%">
+            </div>
+            <div class="slider-track-wrap" id="bet-cap-track">
+              <div class="slider-fill" id="bet-cap-fill"></div>
+              <div class="slider-handle" id="bet-cap-handle"></div>
+            </div>
+            <div class="slider-bounds"><span>1%</span><span>200%</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bet floor toggle -->
+      <div>
+        <div class="bet-cap-row" id="bet-floor-row">
+          <div class="toggle-box" id="bet-floor-toggle"><div class="toggle-knob"></div></div>
+          <span class="bet-cap-label" id="bet-floor-label">Bet must be at least % of pot</span>
+        </div>
+        <div class="single-slider-wrap" id="bet-floor-slider-wrap">
+          <div class="single-slider-inner">
+            <div class="single-slider-header">
+              <span class="slider-label">Min bet / pot</span>
+              <input type="text" id="bet-floor-display" class="single-slider-input" value="20%">
+            </div>
+            <div class="slider-track-wrap" id="bet-floor-track">
+              <div class="slider-fill" id="bet-floor-fill"></div>
+              <div class="slider-handle" id="bet-floor-handle"></div>
+            </div>
+            <div class="slider-bounds"><span>1%</span><span>200%</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <button class="btn-start" id="btn-go">Start Drilling →</button>
+</div>
+
+<!-- DRILL SCREEN -->
+<div id="screen-drill" class="screen hidden">
+  <div class="top-bar">
+    <button class="btn-settings" id="btn-settings">⚙ Settings</button>
+    <div class="mode-toggle">
+      <button class="btn-mode active" id="btn-turn"  data-mode="turn">TURN</button>
+      <button class="btn-mode"        id="btn-river" data-mode="river">RIVER</button>
+    </div>
+  </div>
+
+  <div class="chips"     id="chips"></div>
+  <div class="cards-row" id="cards-row"></div>
+  <div class="hint"      id="hint"></div>
+
+  <div class="timer-wrap">
+    <div class="timer-bar"><div class="timer-fill" id="timer-fill"></div></div>
+    <div class="timer-display" id="timer-display">0:30</div>
+  </div>
+
+  <div class="timer-presets" id="timer-presets"></div>
+
+  <div class="action-btns">
+    <button class="btn-primary" id="btn-startstop">▶ Start</button>
+    <button class="btn-skip"    id="btn-skip">Skip →</button>
+  </div>
+</div>
+
+<script>
+// ── Data ──────────────────────────────────────────────────────────────────────
+const RANK_ORDER   = {"2":2,"3":3,"4":4,"5":5,"6":6,"7":7,"8":8,"9":9,"T":10,"J":11,"Q":12,"K":13,"A":14};
+const SUIT_COLORS  = {s:"#93c5fd",h:"#f87171",d:"#fbbf24",c:"#86efac"};
+const SUIT_SYMBOLS = {s:"♠",h:"♥",d:"♦",c:"♣"};
+const RANKS = ["2","3","4","5","6","7","8","9","T","J","Q","K","A"];
+const SUITS = ["s","h","d","c"];
+
+const FLOP_STRINGS = [
+  "6s3d2c","6s5d4s","4s3d2c","6s5d3c","7s6d3d","Ts4d3d","8s5d4c","7s6d4d","Ts4d2s","7s3d2c",
+  "7s5d3s","Ts6s4d","7s6d2s","Ts6s2d","7s5d2d","Js5d4d","8s6d4c","Js4d2c","Js6d4c","7s6s5d",
+  "8s4s3d","8s5s2d","9s4s2d","9s5d2s","9s5d3c","Ts7d3c","Js7d4s","Js5d2d","8s6d3c","9s5s3d",
+  "9s7d4d","Js5s3d","9s6s2s","9s8d4c","Ts8d2c","3s2s2d","9s7d3d","9s8d2c","4s2d2c","Ts7d5s",
+  "Ts7s4s","Js7d6c","Ts8s5d","Ts8d7c","3s3d2d","Ts8d3s","Js8d7c","Js8d2d","4s3d3c","JsJd2c",
+  "Js9d4c","9s7s5s","Js8d6c","7s4d4c","Ks4s2s","Ts9d5s","Qs4d2s","Ts9d8d","Qs5d4s","Ts9s7d",
+  "Js9d6s","JsJd3c","Ts6d6c","8s5s5d","Ks5s3s","Js9d7c","Qs6s2d","As4d3d","As5d4s","8s7s7d",
+  "9s9d6c","JsTd3d","Ks6d3c","9s6s6d","JsTd3c","Qs6d5c","Ks5d2c","JsTd5c","8s8d6d","Ks7d4c",
+  "Qs7d2s","Ks6d5d","Js7d7c","Ks7s2d","As5s2d","TsTd9c","JsJdJc","8s8d8c","Ts9s9d","Qs8d7d",
+  "Qs8d3d","QsTd2d","Qs9d3s","Qs9d3d","KsTs4d","Qs9s5d","KsTd2c","KsTd4c","Qs9d8s","Ks9s2d",
+  "As6d3d","Ks8s5d","Ks9d4c","Ks8d7c","Ks8d3c","AsJs3s","QsTd6c","Qs4s4d","QsQd5d","QsTd6d",
+  "JsTd9s","QsQd6d","As7d4c","KsJd3c","Ks9d6c","KsTs5d","As8s6s","QsJd7d","KsQs4d","QsJd8d",
+  "QsJd9d","Ks6s6d","KsQd2c","KsKd7c","KsQs3d","QsTd7d","Ks9d8c","Ks9d8d","As8d3c","QsQdJc",
+  "KsQd5d","As8s6d","AsTd2s","As8d7s","Qs8s8d","KsKdJc","As9d2c","As5s5d","As8d6c","AsJd2c",
+  "QsJsTs","KsQdJs","AsQs3d","As9d6c","AsKd4s","AsJd5s","AsTs6d","AsAd5c","AsKd2c","AsQd3c",
+  "AsTd5c","As9d7c","AsQd4c","KsJdTc","AsKs6d","AsTdTc","AsJd8c","AsQd7s","AsQd7d","AsQd9s",
+  "AsKdJd","AsAdKd","AsKdJc"
+];
+
+// Pre-classify every flop once at startup
+function classifyFlop(str) {
+  const cards = [
+    {rank:str[0],suit:str[1]},
+    {rank:str[2],suit:str[3]},
+    {rank:str[4],suit:str[5]},
+  ];
+  const vals = cards.map(c=>RANK_ORDER[c.rank]).sort((a,b)=>a-b);
+  const maxV = vals[2];
+  const highCard = Object.keys(RANK_ORDER).find(k=>RANK_ORDER[k]===maxV);
+  const uniq = new Set(cards.map(c=>c.suit)).size;
+  const tone = uniq===1 ? "monotone" : uniq===2 ? "twotone" : "rainbow";
+  const span = vals[2]-vals[0];
+  let connect;
+  if (span<=4) connect="connected";
+  else if ((vals[1]-vals[0])<=3 || (vals[2]-vals[1])<=3) connect="oesd";
+  else connect="disconnected";
+  return {str, cards, highCard, tone, connect};
+}
+
+const FLOP_META = FLOP_STRINGS.map(classifyFlop);
+
+// ── Filter state ──────────────────────────────────────────────────────────────
+const filters = {
+  highcard: new Set(["A","K","Q","J","T","9","8","7","6","5","4","3"]),
+  connect:  new Set(["connected","oesd","disconnected"]),
+  tone:     new Set(["monotone","twotone","rainbow"]),
+};
+
+function getPool() {
+  return FLOP_META.filter(f =>
+    filters.highcard.has(f.highCard) &&
+    filters.connect.has(f.connect) &&
+    filters.tone.has(f.tone)
+  );
+}
+
+// ── Range / spot state ────────────────────────────────────────────────────────
+const RANGE_META = {
+  stack:   {absMin:100, absMax:10000, step:100, label:"Stack",   fmt:v=>"$"+v.toLocaleString()},
+  pot:     {absMin:10,  absMax:5000,  step:10,  label:"Pot",     fmt:v=>"$"+v},
+  bet:     {absMin:5,   absMax:2000,  step:5,   label:"Bet",     fmt:v=>"$"+v},
+  callers: {absMin:1,   absMax:6,     step:1,   label:"Callers", fmt:v=>""+v},
+};
+const RANGE_FIELDS = ["stack","pot","bet","callers"];
+const ranges = {
+  stack:   {min:500,  max:2000},
+  pot:     {min:50,   max:500},
+  bet:     {min:25,   max:200},
+  callers: {min:1,   max:3},
+};
+
+// ── Bet cap state ─────────────────────────────────────────────────────────────
+let betCapEnabled   = false;
+let betCapPct       = 30; // percent of stack
+let betFloorEnabled = false;
+let betFloorPct     = 20; // percent of pot
+
+// ── Drill state ───────────────────────────────────────────────────────────────
+let mode="turn", scenario=null, revealed=false;
+let timerLen=30, seconds=30, running=false, expired=false, intervalId=null;
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const randInt  = (mn,mx) => mn>=mx ? mn : Math.floor(Math.random()*(mx-mn+1))+mn;
+const randFrom = arr => arr[Math.floor(Math.random()*arr.length)];
+const snap     = (v,inc) => Math.max(inc, Math.round(v/inc)*inc);
+const cardKey  = c => c.rank+c.suit;
+
+function randomCard(exclude) {
+  const used = new Set(exclude.map(cardKey));
+  let c;
+  do { c={rank:randFrom(RANKS),suit:randFrom(SUITS)}; } while(used.has(cardKey(c)));
+  return c;
+}
+
+function generateScenario(m) {
+  const pool = getPool();
+  const fm   = randFrom(pool.length ? pool : FLOP_META);
+  const flop = fm.cards.map(c=>({...c}));
+  const used = new Set(flop.map(cardKey));
+  function newCard() {
+    let c;
+    do { c={rank:randFrom(RANKS),suit:randFrom(SUITS)}; } while(used.has(cardKey(c)));
+    used.add(cardKey(c)); return c;
+  }
+
+  // Generate pot, stack, bet with silent constraints:
+  // 1. stack >= pot (stack must cover at least 100% of pot)
+  // 2. bet <= stack (bet cannot exceed stack)
+  // 3. User-configured betCap (% of stack) and betFloor (% of pot)
+
+  const pot = snap(randInt(ranges.pot.min, ranges.pot.max), RANGE_META.pot.step);
+
+  // Stack must be at least the pot; re-roll within range if possible
+  const stackMin = Math.max(ranges.stack.min, pot);
+  const stackMax = ranges.stack.max;
+  const stack = snap(
+    stackMin <= stackMax ? randInt(stackMin, stackMax) : stackMin,
+    RANGE_META.stack.step
+  );
+
+  // Bet constraints
+  const maxBetAbs   = betCapEnabled   ? Math.floor(stack * betCapPct   / 100) : Infinity;
+  const minBetFloor = betFloorEnabled ? Math.ceil(pot   * betFloorPct  / 100) : -Infinity;
+  // Silent: bet can never exceed stack
+  const betMax = Math.min(stack, betCapEnabled ? Math.min(ranges.bet.max, maxBetAbs) : ranges.bet.max);
+  const betMin = betFloorEnabled ? Math.max(ranges.bet.min, minBetFloor) : ranges.bet.min;
+
+  let bet;
+  if (betMax < betMin) {
+    bet = snap(Math.max(RANGE_META.bet.absMin, Math.min(betMax, betMin)), RANGE_META.bet.step);
+  } else {
+    bet = snap(randInt(betMin, betMax), RANGE_META.bet.step);
+  }
+  // Final safety clamp
+  bet = Math.min(bet, stack);
+
+  return {
+    flop, flopMeta:fm,
+    turn: newCard(),
+    river: newCard(),
+    pot, stack, bet,
+    callers: randInt(ranges.callers.min, ranges.callers.max),
+  };
+}
+
+function rerollCard(field) {
+  const ex = [...scenario.flop, ...(field==="turn"?[]:[scenario.turn])];
+  scenario = {...scenario, [field]: randomCard(ex)};
+}
+function rerollValue(field) {
+  const m = RANGE_META[field];
+  if (field==="pot")     scenario.pot     = snap(randInt(ranges.pot.min,     ranges.pot.max),   m.step);
+  if (field==="stack")   scenario.stack   = snap(randInt(ranges.stack.min,   ranges.stack.max), m.step);
+  if (field==="bet")     scenario.bet     = snap(randInt(ranges.bet.min,     ranges.bet.max),   m.step);
+  if (field==="callers") scenario.callers = randInt(ranges.callers.min, ranges.callers.max);
+}
+
+// ── Timer ─────────────────────────────────────────────────────────────────────
+function startTimer() {
+  clearInterval(intervalId); running=true;
+  intervalId = setInterval(()=>{
+    seconds--;
+    if(seconds<=0){seconds=0;clearInterval(intervalId);running=false;expired=true;}
+    renderDrill();
+  },1000);
+}
+function stopTimer()  { clearInterval(intervalId); running=false; }
+function resetTimer() { clearInterval(intervalId); running=false; expired=false; seconds=timerLen; }
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function cardHTML(rank,suit,rerollable) {
+  const color  = SUIT_COLORS[suit];
+  const sym    = SUIT_SYMBOLS[suit];
+  const rd     = rank==="T"?"10":rank;
+  const border = (suit==="h"||suit==="d")?"#ef444433":"#ffffff18";
+  return `<div class="card${rerollable?" rerollable":""}" style="color:${color};border:1.5px solid ${border};">
+    <span>${rd}</span><span class="suit-sym">${sym}</span>${rerollable?'<span class="reroll-icon">↺</span>':""}
+  </div>`;
+}
+
+function renderDrill() {
+  const sc = scenario;
+
+  // chips
+  const chipsEl = document.getElementById("chips");
+  chipsEl.innerHTML = [
+    ["stack", "$"+sc.stack.toLocaleString()],
+    ["pot",   "$"+sc.pot],
+    ["bet",   "$"+sc.bet],
+    ["callers",""+sc.callers],
+  ].map(([f,v])=>`<div class="chip" data-reroll="${f}">
+    <span class="chip-label">${f.charAt(0).toUpperCase()+f.slice(1)} ↺</span>
+    <span class="chip-value">${v}</span>
+  </div>`).join("");
+  chipsEl.querySelectorAll(".chip").forEach(chip=>{
+    chip.addEventListener("click",()=>{ rerollValue(chip.dataset.reroll); renderDrill(); });
+  });
+
+  // cards
+  // revealed stages: false | "turn" | "river"  (in turn mode)
+  //                  false | "river"            (in river mode)
+  let html = sc.flop.map(c=>cardHTML(c.rank,c.suit,false)).join("");
+
+  if (mode === "river") {
+    // River mode: turn is always shown, river is hidden then revealed
+    html += `<div class="divider"></div>` + cardHTML(sc.turn.rank, sc.turn.suit, false);
+    html += `<div class="divider"></div>`;
+    if (revealed) {
+      html += cardHTML(sc.river.rank, sc.river.suit, true);
+    } else {
+      html += `<div class="card-hidden" data-street="river">?</div>`;
+    }
+  } else {
+    // Turn mode: turn hidden first, then river hidden second
+    html += `<div class="divider"></div>`;
+    if (!revealed) {
+      html += `<div class="card-hidden" data-street="turn">?</div>`;
+    } else if (revealed === "turn") {
+      html += cardHTML(sc.turn.rank, sc.turn.suit, true);
+      html += `<div class="divider"></div><div class="card-hidden" data-street="river">?</div>`;
+    } else {
+      // revealed === "river"
+      html += cardHTML(sc.turn.rank, sc.turn.suit, false);
+      html += `<div class="divider"></div>` + cardHTML(sc.river.rank, sc.river.suit, true);
+    }
+  }
+
+  const cr = document.getElementById("cards-row");
+  cr.innerHTML = html;
+
+  // Click handlers
+  if (mode === "river") {
+    const hidden = cr.querySelector(".card-hidden");
+    if (hidden) hidden.addEventListener("click", () => { revealed = true; renderDrill(); });
+    const rerollable = cr.querySelector(".rerollable");
+    if (rerollable) rerollable.addEventListener("click", () => { rerollCard("river"); renderDrill(); });
+  } else {
+    // Turn mode — attach to whichever card is interactive
+    const turnCard = cr.querySelector(".rerollable[data-stage='turn'], .card-hidden[data-street='turn']");
+    const riverCard = cr.querySelector(".rerollable[data-stage='river'], .card-hidden[data-street='river']");
+    // Simpler: just attach to all hidden/rerollable
+    cr.querySelectorAll(".card-hidden").forEach(el => {
+      el.addEventListener("click", () => {
+        if (el.dataset.street === "turn")  { revealed = "turn";  renderDrill(); }
+        if (el.dataset.street === "river") { revealed = "river"; renderDrill(); }
+      });
+    });
+    cr.querySelectorAll(".rerollable").forEach(el => {
+      el.addEventListener("click", () => {
+        // reroll whichever is the last revealed card
+        if (revealed === "river") rerollCard("river");
+        else rerollCard("turn");
+        renderDrill();
+      });
+    });
+  }
+
+  // Hint text
+  let hint = "";
+  if (mode === "river") {
+    hint = revealed ? "CLICK RIVER CARD TO RE-ROLL" : "CLICK RIVER CARD TO REVEAL";
+  } else {
+    if (!revealed)          hint = "CLICK TURN CARD TO REVEAL";
+    else if (revealed === "turn")  hint = "CLICK RIVER CARD TO REVEAL · CLICK TURN TO RE-ROLL";
+    else                    hint = "CLICK RIVER CARD TO RE-ROLL";
+  }
+  document.getElementById("hint").textContent = hint;
+
+  // timer bar
+  const pct   = seconds/timerLen;
+  const color = pct>0.5?"#22c55e":pct>0.25?"#f59e0b":"#ef4444";
+  const fill  = document.getElementById("timer-fill");
+  fill.style.width = (pct*100)+"%"; fill.style.background = color;
+
+  const td = document.getElementById("timer-display");
+  td.textContent = expired?"TIME":`0:${String(seconds).padStart(2,"0")}`;
+  td.className = "timer-display"+(expired?" expired":seconds<=8?" warn":"");
+
+  // presets
+  const pe = document.getElementById("timer-presets");
+  pe.innerHTML = [15,20,30,45,60].map(t=>
+    `<button class="btn-preset${timerLen===t?" active":""}" data-t="${t}">${t}s</button>`
+  ).join("");
+  pe.querySelectorAll(".btn-preset").forEach(b=>{
+    b.addEventListener("click",()=>{
+      timerLen=parseInt(b.dataset.t); seconds=timerLen; expired=false; stopTimer(); renderDrill();
+    });
+  });
+
+  // start/stop btn
+  const ssb = document.getElementById("btn-startstop");
+  ssb.textContent = expired?"Next →":running?"⏸ Pause":"▶ Start";
+  ssb.className = "btn-primary"+(expired?" expired":running?" paused":"");
+
+  document.getElementById("btn-turn").classList.toggle("active",  mode==="turn");
+  document.getElementById("btn-river").classList.toggle("active", mode==="river");
+}
+
+// ── Settings: pill toggles ────────────────────────────────────────────────────
+function updateMatchCount() {
+  const n = getPool().length;
+  document.getElementById("match-num").textContent = n;
+  const warn = document.getElementById("filter-warn");
+  const go   = document.getElementById("btn-go");
+  n===0 ? (warn.classList.add("visible"), go.disabled=true)
+        : (warn.classList.remove("visible"), go.disabled=false);
+}
+
+function setupPillGroup(id, key) {
+  document.getElementById(id).querySelectorAll(".pill").forEach(pill=>{
+    pill.addEventListener("click",()=>{
+      const v = pill.dataset.val;
+      filters[key].has(v) ? (filters[key].delete(v), pill.classList.remove("active"))
+                           : (filters[key].add(v),    pill.classList.add("active"));
+      updateMatchCount();
+    });
+  });
+}
+
+// ── Settings: sliders ─────────────────────────────────────────────────────────
+function buildSliders() {
+  const container = document.getElementById("sliders-container");
+  container.innerHTML = "";
+  RANGE_FIELDS.forEach(field=>{
+    const meta = RANGE_META[field];
+    const r    = ranges[field];
+    const wrap = document.createElement("div");
+    wrap.className = "slider-wrap";
+    wrap.innerHTML = `
+      <div class="slider-header">
+        <span class="slider-label">${meta.label}</span>
+        <div class="slider-inputs">
+          <input type="text" class="min-input" value="${r.min}">
+          <span class="slider-dash">–</span>
+          <input type="text" class="max-input" value="${r.max}">
+        </div>
+      </div>
+      <div class="slider-track-wrap">
+        <div class="slider-fill"></div>
+        <div class="slider-handle min-handle"></div>
+        <div class="slider-handle max-handle"></div>
+      </div>
+      <div class="slider-bounds"><span>${meta.fmt(meta.absMin)}</span><span>${meta.fmt(meta.absMax)}</span></div>
+    `;
+    container.appendChild(wrap);
+
+    const track = wrap.querySelector(".slider-track-wrap");
+    const fill  = wrap.querySelector(".slider-fill");
+    const minh  = wrap.querySelector(".min-handle");
+    const maxh  = wrap.querySelector(".max-handle");
+    const mini  = wrap.querySelector(".min-input");
+    const maxi  = wrap.querySelector(".max-input");
+
+    const toF   = v => (v-meta.absMin)/(meta.absMax-meta.absMin);
+    const fromF = f => snap(meta.absMin+f*(meta.absMax-meta.absMin), meta.step);
+
+    function upd() {
+      const rv = ranges[field];
+      const mf=toF(rv.min), xf=toF(rv.max);
+      fill.style.left  = (mf*100)+"%";
+      fill.style.width = ((xf-mf)*100)+"%";
+      minh.style.left  = (mf*100)+"%";
+      maxh.style.left  = (xf*100)+"%";
+      mini.value=rv.min; maxi.value=rv.max;
+    }
+    upd();
+
+    function drag(which,e) {
+      e.preventDefault();
+      function mv(ev) {
+        const cx = ev.touches?ev.touches[0].clientX:ev.clientX;
+        const rc = track.getBoundingClientRect();
+        const f  = Math.max(0,Math.min(1,(cx-rc.left)/rc.width));
+        const v  = fromF(f);
+        const rv = ranges[field];
+        ranges[field] = which==="min" ? {...rv,min:Math.min(v,rv.max)} : {...rv,max:Math.max(v,rv.min)};
+        upd();
+      }
+      function up() {
+        window.removeEventListener("mousemove",mv);
+        window.removeEventListener("mouseup",up);
+        window.removeEventListener("touchmove",mv);
+        window.removeEventListener("touchend",up);
+      }
+      window.addEventListener("mousemove",mv);
+      window.addEventListener("mouseup",up);
+      window.addEventListener("touchmove",mv,{passive:false});
+      window.addEventListener("touchend",up);
+    }
+    minh.addEventListener("mousedown",  e=>drag("min",e));
+    minh.addEventListener("touchstart", e=>drag("min",e),{passive:false});
+    maxh.addEventListener("mousedown",  e=>drag("max",e));
+    maxh.addEventListener("touchstart", e=>drag("max",e),{passive:false});
+
+    function commit(which) {
+      const inp = which==="min"?mini:maxi;
+      const raw = parseInt(inp.value.replace(/[^0-9]/g,""),10);
+      if(!isNaN(raw)) {
+        const cl = snap(Math.max(meta.absMin,Math.min(raw,meta.absMax)),meta.step);
+        const rv = ranges[field];
+        ranges[field] = which==="min"?{...rv,min:cl}:{...rv,max:cl};
+      }
+      upd();
+    }
+    mini.addEventListener("blur",    ()=>commit("min"));
+    maxi.addEventListener("blur",    ()=>commit("max"));
+    mini.addEventListener("keydown", e=>{if(e.key==="Enter")commit("min");});
+    maxi.addEventListener("keydown", e=>{if(e.key==="Enter")commit("max");});
+  });
+}
+
+// ── Bet cap single slider ─────────────────────────────────────────────────────
+function setupBetCapSlider() {
+  const track   = document.getElementById("bet-cap-track");
+  const fill    = document.getElementById("bet-cap-fill");
+  const handle  = document.getElementById("bet-cap-handle");
+  const display = document.getElementById("bet-cap-display");
+
+  const absMin = 1, absMax = 200;
+  const toF   = v => (v - absMin) / (absMax - absMin);
+  const fromF = f => Math.max(absMin, Math.min(absMax, Math.round(absMin + f * (absMax - absMin))));
+
+  function upd() {
+    const f = toF(betCapPct);
+    fill.style.left   = "0%";
+    fill.style.width  = (f * 100) + "%";
+    handle.style.left = (f * 100) + "%";
+    display.value = betCapPct + "%";
+  }
+  upd();
+
+  function commitInput() {
+    const raw = parseInt(display.value.replace(/[^0-9]/g, ""), 10);
+    if (!isNaN(raw)) betCapPct = Math.max(absMin, Math.min(absMax, raw));
+    upd();
+  }
+  display.addEventListener("blur",    commitInput);
+  display.addEventListener("keydown", e => { if (e.key === "Enter") { commitInput(); display.blur(); } });
+  display.addEventListener("focus",   () => { display.value = betCapPct; }); // strip % while editing
+
+  function drag(e) {
+    e.preventDefault();
+    function mv(ev) {
+      const cx = ev.touches ? ev.touches[0].clientX : ev.clientX;
+      const rc = track.getBoundingClientRect();
+      const f  = Math.max(0, Math.min(1, (cx - rc.left) / rc.width));
+      betCapPct = fromF(f);
+      upd();
+    }
+    function up() {
+      window.removeEventListener("mousemove", mv);
+      window.removeEventListener("mouseup",   up);
+      window.removeEventListener("touchmove", mv);
+      window.removeEventListener("touchend",  up);
+    }
+    window.addEventListener("mousemove", mv);
+    window.addEventListener("mouseup",   up);
+    window.addEventListener("touchmove", mv, { passive: false });
+    window.addEventListener("touchend",  up);
+  }
+  handle.addEventListener("mousedown",  drag);
+  handle.addEventListener("touchstart", drag, { passive: false });
+}
+
+function setupBetCapToggle() {
+  const toggle   = document.getElementById("bet-cap-toggle");
+  const label    = document.getElementById("bet-cap-label");
+  const sliderWrap = document.getElementById("bet-cap-slider-wrap");
+
+  function update() {
+    toggle.classList.toggle("on", betCapEnabled);
+    label.classList.toggle("on",  betCapEnabled);
+    sliderWrap.classList.toggle("open", betCapEnabled);
+  }
+  update();
+
+  document.getElementById("bet-cap-row").addEventListener("click", () => {
+    betCapEnabled = !betCapEnabled;
+    update();
+  });
+}
+
+function setupBetFloorSlider() {
+  const track   = document.getElementById("bet-floor-track");
+  const fill    = document.getElementById("bet-floor-fill");
+  const handle  = document.getElementById("bet-floor-handle");
+  const display = document.getElementById("bet-floor-display");
+
+  const absMin = 1, absMax = 200;
+  const toF   = v => (v - absMin) / (absMax - absMin);
+  const fromF = f => Math.max(absMin, Math.min(absMax, Math.round(absMin + f * (absMax - absMin))));
+
+  function upd() {
+    const f = toF(betFloorPct);
+    fill.style.left   = "0%";
+    fill.style.width  = (f * 100) + "%";
+    handle.style.left = (f * 100) + "%";
+    display.value = betFloorPct + "%";
+  }
+  upd();
+
+  function commitInput() {
+    const raw = parseInt(display.value.replace(/[^0-9]/g, ""), 10);
+    if (!isNaN(raw)) betFloorPct = Math.max(absMin, Math.min(absMax, raw));
+    upd();
+  }
+  display.addEventListener("blur",    commitInput);
+  display.addEventListener("keydown", e => { if (e.key === "Enter") { commitInput(); display.blur(); } });
+  display.addEventListener("focus",   () => { display.value = betFloorPct; });
+
+  function drag(e) {
+    e.preventDefault();
+    function mv(ev) {
+      const cx = ev.touches ? ev.touches[0].clientX : ev.clientX;
+      const rc = track.getBoundingClientRect();
+      const f  = Math.max(0, Math.min(1, (cx - rc.left) / rc.width));
+      betFloorPct = fromF(f);
+      upd();
+    }
+    function up() {
+      window.removeEventListener("mousemove", mv);
+      window.removeEventListener("mouseup",   up);
+      window.removeEventListener("touchmove", mv);
+      window.removeEventListener("touchend",  up);
+    }
+    window.addEventListener("mousemove", mv);
+    window.addEventListener("mouseup",   up);
+    window.addEventListener("touchmove", mv, { passive: false });
+    window.addEventListener("touchend",  up);
+  }
+  handle.addEventListener("mousedown",  drag);
+  handle.addEventListener("touchstart", drag, { passive: false });
+}
+
+function setupBetFloorToggle() {
+  const toggle     = document.getElementById("bet-floor-toggle");
+  const label      = document.getElementById("bet-floor-label");
+  const sliderWrap = document.getElementById("bet-floor-slider-wrap");
+
+  function update() {
+    toggle.classList.toggle("on", betFloorEnabled);
+    label.classList.toggle("on",  betFloorEnabled);
+    sliderWrap.classList.toggle("open", betFloorEnabled);
+  }
+  update();
+
+  document.getElementById("bet-floor-row").addEventListener("click", () => {
+    betFloorEnabled = !betFloorEnabled;
+    update();
+  });
+}
+
+// ── Nav ───────────────────────────────────────────────────────────────────────
+function showSettings() {
+  stopTimer();
+  document.getElementById("screen-settings").classList.remove("hidden");
+  document.getElementById("screen-drill").classList.add("hidden");
+  buildSliders();
+  updateMatchCount();
+}
+
+function nextScenario() {
+  scenario=generateScenario(mode); revealed=false; resetTimer(); startTimer(); renderDrill();
+}
+
+function showDrill() {
+  document.getElementById("screen-settings").classList.add("hidden");
+  document.getElementById("screen-drill").classList.remove("hidden");
+  nextScenario();
+}
+
+// ── Wire buttons ──────────────────────────────────────────────────────────────
+setupPillGroup("filter-highcard","highcard");
+setupPillGroup("filter-connect", "connect");
+setupPillGroup("filter-tone",    "tone");
+
+// All / None for high card
+const HC_VALS = ["A","K","Q","J","T","9","8","7","6","5","4","3"];
+document.getElementById("hc-all").addEventListener("click", () => {
+  HC_VALS.forEach(v => filters.highcard.add(v));
+  document.getElementById("filter-highcard").querySelectorAll(".pill").forEach(p => p.classList.add("active"));
+  updateMatchCount();
+});
+document.getElementById("hc-none").addEventListener("click", () => {
+  HC_VALS.forEach(v => filters.highcard.delete(v));
+  document.getElementById("filter-highcard").querySelectorAll(".pill").forEach(p => p.classList.remove("active"));
+  updateMatchCount();
+});
+
+document.getElementById("btn-go").addEventListener("click", showDrill);
+document.getElementById("btn-settings").addEventListener("click", showSettings);
+
+document.getElementById("btn-turn").addEventListener("click",()=>{
+  mode="turn"; scenario=generateScenario(mode); revealed=false; resetTimer(); renderDrill();
+});
+document.getElementById("btn-river").addEventListener("click",()=>{
+  mode="river"; scenario=generateScenario(mode); revealed=false; resetTimer(); renderDrill();
+});
+document.getElementById("btn-startstop").addEventListener("click",()=>{
+  if(expired){nextScenario();return;}
+  running ? stopTimer() : startTimer();
+  renderDrill();
+});
+document.getElementById("btn-skip").addEventListener("click", nextScenario);
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+buildSliders();
+updateMatchCount();
+setupBetCapSlider();
+setupBetCapToggle();
+setupBetFloorSlider();
+setupBetFloorToggle();
+</script>
+</body>
+</html>
