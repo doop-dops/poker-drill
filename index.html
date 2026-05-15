@@ -309,6 +309,72 @@
     padding: 12px 20px; border-radius: 10px; border: 1px solid #ffffff20;
     background: transparent; color: #94a3b8; font-size: 15px; font-weight: 600; cursor: pointer;
   }
+
+  /* ── Ranges button ── */
+  .btn-ranges {
+    padding: 6px 14px; border-radius: 8px; border: 1px solid #6366f140;
+    background: #6366f110; color: #a5b4fc; font-size: 12px;
+    font-weight: 600; cursor: pointer; letter-spacing: 0.5px; transition: all 0.15s;
+  }
+  .btn-ranges:hover { background: #6366f128; border-color: #6366f1; }
+
+  /* ── Range viewer modal ── */
+  .range-modal {
+    position: fixed; inset: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: center; padding: 16px;
+  }
+  .range-modal.hidden { display: none; }
+  .range-modal-backdrop {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.72); backdrop-filter: blur(4px);
+  }
+  .range-modal-content {
+    position: relative; z-index: 1;
+    background: #0f0f20; border: 1px solid #ffffff18; border-radius: 16px;
+    padding: 20px; display: flex; flex-direction: column; gap: 14px;
+    max-width: 520px; width: 100%; max-height: 92vh; overflow-y: auto;
+  }
+  .range-modal-header { display: flex; justify-content: space-between; align-items: center; }
+  .range-modal-title { font-size: 11px; font-weight: 800; letter-spacing: 2px; color: #94a3b8; }
+  .range-close-btn {
+    padding: 4px 10px; border-radius: 6px; border: 1px solid #ffffff18;
+    background: transparent; color: #64748b; cursor: pointer; font-size: 13px; transition: all 0.15s;
+  }
+  .range-close-btn:hover { border-color: #6366f1; color: #a5b4fc; }
+  .range-role-row { display: flex; gap: 8px; }
+  .range-role-btn {
+    flex: 1; padding: 8px; border-radius: 8px; border: 1px solid #ffffff15;
+    background: transparent; color: #64748b; font-size: 11px; font-weight: 700;
+    letter-spacing: 1px; cursor: pointer; transition: all 0.15s; text-transform: uppercase;
+  }
+  .range-role-btn.active { border-color: #6366f1; background: #6366f120; color: #a5b4fc; }
+  .range-grid-wrap { overflow-x: auto; }
+  .range-grid {
+    display: grid;
+    grid-template-columns: 16px repeat(13, 1fr);
+    gap: 2px; min-width: 300px;
+  }
+  .rg-label {
+    display: flex; align-items: center; justify-content: center;
+    font-size: 8px; font-weight: 700; color: #3f4f66;
+  }
+  .rg-cell {
+    aspect-ratio: 1; border-radius: 2px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 6.5px; font-weight: 700;
+    background: #141426; color: transparent;
+    transition: transform 0.1s, z-index 0s; cursor: default; user-select: none;
+    position: relative;
+  }
+  .rg-cell:hover { transform: scale(1.4); z-index: 10; color: #fff !important; }
+  .rg-cell.in-range { color: rgba(255,255,255,0.6); }
+  .range-combo-count {
+    text-align: center; font-size: 10px; color: #475569; letter-spacing: 0.5px;
+  }
+  .range-combo-count span { color: #818cf8; font-weight: 700; }
+  .range-legend { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 10px; color: #64748b; }
+  .legend-swatch { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
 </style>
 </head>
 <body>
@@ -594,6 +660,7 @@
       <button class="btn-mode"        id="btn-river" data-mode="river">RIVER</button>
     </div>
     <button class="btn-unit hidden" id="btn-unit">$</button>
+    <button class="btn-ranges hidden" id="btn-ranges">Ranges ▤</button>
   </div>
 
   <div class="preset-header hidden" id="preset-header"></div>
@@ -619,6 +686,31 @@
   <div class="action-btns">
     <button class="btn-primary" id="btn-startstop">▶ Start</button>
     <button class="btn-skip"    id="btn-skip">Skip →</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ RANGE VIEWER MODAL -->
+<div id="range-modal" class="range-modal hidden">
+  <div class="range-modal-backdrop" id="range-backdrop"></div>
+  <div class="range-modal-content">
+    <div class="range-modal-header">
+      <span class="range-modal-title" id="range-modal-title">RANGE VIEWER</span>
+      <button class="range-close-btn" id="range-close-btn">✕</button>
+    </div>
+    <div class="range-role-row">
+      <button class="range-role-btn active" id="range-btn-raiser">Raiser</button>
+      <button class="range-role-btn"        id="range-btn-defender">Defender</button>
+    </div>
+    <div class="range-grid-wrap">
+      <div class="range-grid" id="range-grid"></div>
+    </div>
+    <div class="range-combo-count" id="range-combo-count"></div>
+    <div class="range-legend">
+      <span class="legend-item"><span class="legend-swatch" style="background:rgba(99,102,241,1)"></span>100%</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:rgba(99,102,241,0.7)"></span>75%</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:rgba(99,102,241,0.5)"></span>50%</span>
+      <span class="legend-item"><span class="legend-swatch" style="background:rgba(99,102,241,0.28)"></span>25%</span>
+    </div>
   </div>
 </div>
 
@@ -767,13 +859,13 @@ let betCapEnabled = true, betCapPct = 30;
 let betFloorEnabled = true, betFloorPct = 20;
 
 // ── Preset state ──────────────────────────────────────────────────────────────
-let settingsMode   = "manual";
+let settingsMode   = "preset";
 let presetStake    = "1/3";
 let presetStackBBRange = {min: 100, max: 200};
 let presetPotTypes = new Set(["SRP","3b","4b"]);
 let showInBB       = false;
-let selectedConfigs = {};   // configId → 'raiser' | 'defender'
-let drillSpecificSpots = false;
+let selectedConfigs = { lp_bb_srp: 'both' };   // configId → 'raiser' | 'defender' | 'both'
+let drillSpecificSpots = true;
 // Preset bet / callers controls
 let presetBetPctRange   = {min: 25, max: 150};
 let presetCallersRange  = {min: 1,  max: 3};
@@ -1077,9 +1169,10 @@ function generateConfigScenario() {
 
   // Pick hero hand
   let heroHand = null;
+  let heroRangeKey = null;
   if (drillSpecificSpots) {
-    const rangeKey = role === 'raiser' ? config.raiserFile : config.defenderFile;
-    heroHand = pickHeroHand(rangeKey, [...flop, turn, river]);
+    heroRangeKey = role === 'raiser' ? config.raiserFile : config.defenderFile;
+    heroHand = pickHeroHand(heroRangeKey, [...flop, turn, river]);
   }
 
   const roleLabel = role === 'raiser' ? 'Raiser' : 'Defender';
@@ -1089,7 +1182,9 @@ function generateConfigScenario() {
     flop, flopMeta: fm, turn, river,
     pot, stack, bet, betPct, callers,
     bbValue: BB, presetSummary: summary,
-    heroHand, heroRole: roleLabel,
+    heroHand, heroRole: roleLabel, heroRangeKey,
+    raiserRangeKey: config.raiserFile,
+    defenderRangeKey: config.defenderFile,
   };
 }
 
@@ -1113,6 +1208,12 @@ function rerollValue(field) {
     scenario.bet = bet; scenario.betPct = betPct;
   }
   else if (field==="callers") scenario.callers = randInt(ranges.callers.min, ranges.callers.max);
+}
+
+function rerollHeroHand() {
+  if (!scenario || !scenario.heroRangeKey) return;
+  const newHand = pickHeroHand(scenario.heroRangeKey, [...scenario.flop, scenario.turn, scenario.river]);
+  if (newHand) scenario = {...scenario, heroHand: newHand};
 }
 
 // ── Street advance ────────────────────────────────────────────────────────────
@@ -1172,6 +1273,14 @@ function renderDrill() {
     unitBtn.classList.add("hidden");
   }
 
+  // ── Ranges button ──
+  const rangesBtn = document.getElementById("btn-ranges");
+  if (sc.raiserRangeKey || sc.defenderRangeKey) {
+    rangesBtn.classList.remove("hidden");
+  } else {
+    rangesBtn.classList.add("hidden");
+  }
+
   // ── Chips ──
   const chipsEl = document.getElementById("chips");
   const chipDefs = [
@@ -1198,9 +1307,15 @@ function renderDrill() {
   const heroTagEl = document.getElementById("hero-tag");
   if (drillMode === "preset" && sc.heroHand && sc.heroHand.length === 2) {
     const [c1, c2] = sc.heroHand;
-    heroCardsEl.innerHTML = cardHTML(c1.rank, c1.suit, false, true) + cardHTML(c2.rank, c2.suit, false, true);
+    const heroRerollable = !!sc.heroRangeKey;
+    heroCardsEl.innerHTML = cardHTML(c1.rank, c1.suit, heroRerollable, true) + cardHTML(c2.rank, c2.suit, heroRerollable, true);
     heroTagEl.textContent = sc.heroRole ? `HERO · ${sc.heroRole.toUpperCase()}` : "HERO";
     heroRow.classList.remove("hidden");
+    if (heroRerollable) {
+      heroCardsEl.querySelectorAll(".card.rerollable").forEach(card => {
+        card.addEventListener("click", () => { rerollHeroHand(); renderDrill(); });
+      });
+    }
   } else {
     heroRow.classList.add("hidden");
   }
@@ -1539,6 +1654,131 @@ function showDrill() {
   nextScenario();
 }
 
+// ── Range viewer ─────────────────────────────────────────────────────────────
+const GRID_RANKS = ['A','K','Q','J','T','9','8','7','6','5','4','3','2'];
+let rangeViewerRole = 'raiser';
+
+function getGridHandKey(ri, ci) {
+  if (ri === ci) return GRID_RANKS[ri] + GRID_RANKS[ri];           // pair
+  if (ri < ci)  return GRID_RANKS[ri] + GRID_RANKS[ci] + 's';     // suited  (row = higher rank)
+  return GRID_RANKS[ci] + GRID_RANKS[ri] + 'o';                    // offsuit (col = higher rank)
+}
+
+function parseRangeWithFreq(rangeStr) {
+  const handMap = {};
+  function setHand(key, freq) { handMap[key] = Math.max(handMap[key] || 0, freq); }
+
+  function addHandObjF(h, freq) {
+    let key;
+    if (h.isPair)        key = h.r1 + h.r2;
+    else if (h.suited)   key = h.r1 + h.r2 + 's';
+    else                 key = h.r1 + h.r2 + 'o';
+    setHand(key, freq);
+  }
+
+  function processBlock(text, freq) {
+    const tokens = text.split(',').map(t => t.trim()).filter(Boolean);
+    for (const t of tokens) {
+      const di = t.indexOf('-');
+      if (di > 0 && di < t.length - 1) {
+        const hands = [];
+        expandHandRange(t.slice(0, di), t.slice(di + 1), hands);
+        hands.forEach(h => addHandObjF(h, freq));
+      } else {
+        const hands = [];
+        addSingleHand(t, hands);
+        hands.forEach(h => addHandObjF(h, freq));
+      }
+    }
+  }
+
+  let remaining = rangeStr;
+  const re = /\[(\d+\.?\d*)\]([\s\S]*?)\[\/\d+\.?\d*\]/g;
+  let m;
+  while ((m = re.exec(rangeStr)) !== null) {
+    processBlock(m[2], parseFloat(m[1]) / 100);
+    remaining = remaining.replace(m[0], '');
+  }
+  if (remaining.trim()) processBlock(remaining, 1.0);
+  return handMap;
+}
+
+// Count weighted combos in a handMap
+function countCombos(handMap) {
+  let total = 0;
+  for (const [key, freq] of Object.entries(handMap)) {
+    const isPair = key.length === 2;
+    const isSuited = key.endsWith('s');
+    const combos = isPair ? 6 : isSuited ? 4 : 12;
+    total += combos * freq;
+  }
+  return Math.round(total * 10) / 10;
+}
+
+function renderRangeGrid(rangeKey, roleLabel) {
+  const gridEl  = document.getElementById('range-grid');
+  const countEl = document.getElementById('range-combo-count');
+  const titleEl = document.getElementById('range-modal-title');
+  const rangeStr = RANGE_STRINGS[rangeKey];
+
+  titleEl.textContent = roleLabel ? roleLabel.toUpperCase() + ' RANGE' : 'RANGE VIEWER';
+
+  if (!rangeStr) {
+    gridEl.innerHTML = '<div style="color:#64748b;font-size:12px;padding:12px;">No range data for this spot.</div>';
+    countEl.textContent = '';
+    return;
+  }
+
+  const handMap = parseRangeWithFreq(rangeStr);
+  const combos  = countCombos(handMap);
+  countEl.innerHTML = `<span>${combos}</span> weighted combos`;
+
+  let html = '';
+  // Corner + top rank labels
+  html += '<div class="rg-label"></div>';
+  GRID_RANKS.forEach(r => { html += `<div class="rg-label">${r}</div>`; });
+
+  GRID_RANKS.forEach((rowRank, ri) => {
+    html += `<div class="rg-label">${rowRank}</div>`;
+    GRID_RANKS.forEach((colRank, ci) => {
+      const key   = getGridHandKey(ri, ci);
+      const freq  = handMap[key] || 0;
+      const isPair   = ri === ci;
+      const isSuited = ri < ci;
+
+      let bg = '#141426';
+      if (freq > 0) {
+        // Pairs: deeper indigo; suited: indigo; offsuit: slightly purple
+        if (isPair)        bg = `rgba(79,70,229,${(0.25 + freq * 0.75).toFixed(2)})`;
+        else if (isSuited) bg = `rgba(99,102,241,${(0.18 + freq * 0.82).toFixed(2)})`;
+        else               bg = `rgba(139,92,246,${(0.18 + freq * 0.82).toFixed(2)})`;
+      }
+
+      const label  = isPair ? (rowRank+rowRank) : isSuited ? (rowRank+colRank+'s') : (colRank+rowRank+'o');
+      const pctTxt = freq > 0 ? Math.round(freq * 100) + '%' : '';
+      html += `<div class="rg-cell${freq > 0 ? ' in-range' : ''}" style="background:${bg};" title="${label}${pctTxt ? ' · ' + pctTxt : ''}">${label}</div>`;
+    });
+  });
+
+  gridEl.innerHTML = html;
+}
+
+function openRangeViewer() {
+  document.getElementById('range-modal').classList.remove('hidden');
+  renderCurrentRangeGrid();
+}
+function closeRangeViewer() {
+  document.getElementById('range-modal').classList.add('hidden');
+}
+function renderCurrentRangeGrid() {
+  if (!scenario) return;
+  const key   = rangeViewerRole === 'raiser' ? scenario.raiserRangeKey : scenario.defenderRangeKey;
+  const label = rangeViewerRole === 'raiser' ? 'Raiser' : 'Defender';
+  document.getElementById('range-btn-raiser').classList.toggle('active',   rangeViewerRole === 'raiser');
+  document.getElementById('range-btn-defender').classList.toggle('active', rangeViewerRole === 'defender');
+  renderRangeGrid(key, label);
+}
+
 // ── Wire everything up ────────────────────────────────────────────────────────
 setupPillGroup("filter-highcard","highcard");
 setupPillGroup("filter-connect","connect");
@@ -1625,6 +1865,12 @@ document.getElementById("tab-preset").addEventListener("click",()=>applySettings
 
 document.getElementById("btn-go").addEventListener("click",showDrill);
 document.getElementById("btn-settings").addEventListener("click",showSettings);
+document.getElementById("btn-ranges").addEventListener("click", openRangeViewer);
+document.getElementById("range-close-btn").addEventListener("click", closeRangeViewer);
+document.getElementById("range-backdrop").addEventListener("click", closeRangeViewer);
+document.getElementById("range-btn-raiser").addEventListener("click", () => { rangeViewerRole = 'raiser'; renderCurrentRangeGrid(); });
+document.getElementById("range-btn-defender").addEventListener("click", () => { rangeViewerRole = 'defender'; renderCurrentRangeGrid(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeRangeViewer(); });
 
 document.getElementById("btn-turn").addEventListener("click",()=>{
   mode="turn"; scenario=(drillMode==="preset"?generatePresetScenario():generateScenario());
@@ -1687,7 +1933,11 @@ setupPresetRangeSlider("pbp-track","pbp-fill","pbp-minh","pbp-maxh","pbp-min","p
 setupPresetRangeSlider("pcal-track","pcal-fill","pcal-minh","pcal-maxh","pcal-min","pcal-max",1,6,1,presetCallersRange,v=>""+v);
 buildSliders();
 updateMatchCount();
-applySettingsMode("manual");
+applySettingsMode("preset");
+// Apply default specific-spots toggle state to UI
+document.getElementById("hero-cards-toggle").classList.add("on");
+document.getElementById("hero-cards-label").classList.add("on");
+document.getElementById("config-spots-section").classList.remove("hidden");
 </script>
 </body>
 </html>
